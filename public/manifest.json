@@ -4,7 +4,7 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f3efe6",
-  "theme_color": "#0b3d2e",
+  "theme_color": "#171717",
   "description": "Find event services in Zambia",
   "icons": []
 }
