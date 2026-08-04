@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat — ZedEvents</title>
+  <meta name="theme-color" content="#C2410C" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <link rel="stylesheet" href="/css/extra.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/chats.html">
+      <div class="brand" id="otherName">Chat</div>
+      <span class="brand-sub">Back to chats</span>
+    </a>
+  </header>
+
+  <div class="chat-page">
+    <div class="quick-replies" id="quick"></div>
+    <div class="chat-messages" id="messages">
+      <div class="status" id="status">Loading…</div>
+    </div>
+    <div class="chat-compose">
+      <label class="chip-btn" style="display:flex;align-items:center;cursor:pointer;">
+        📷
+        <input id="photoInput" type="file" accept="image/*" hidden />
+      </label>
+      <input id="text" type="text" placeholder="Type a message…" />
+      <button class="primary-btn" type="button" id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (!ZEAuth.requireLogin(location.pathname + location.search)) {
+      /* redirected */
+    } else {
+      const user = ZEAuth.getUser();
+      const otherId = new URLSearchParams(location.search).get("userId");
+      const messagesEl = document.getElementById("messages");
+      const status = document.getElementById("status");
+      const textInput = document.getElementById("text");
+      let sending = false;
+
+      if (!otherId) {
+        status.textContent = "Missing chat user.";
+      } else {
+        const customerReplies = [
+          "❓ Is this still available?",
+          "💰 Can you do a better price?",
+          "📦 What's included in this package?",
+          "📸 Can I see more photos?",
+        ];
+        const vendorReplies = [
+          "✅ Still available for that date",
+          "💰 Price is negotiable",
+          "📅 Fully booked, sorry",
+          "📸 I'll send more photos",
+        ];
+        const replies = user.is_vendor ? vendorReplies : customerReplies;
+        document.getElementById("quick").innerHTML = replies
+          .map((t) => `<button type="button" data-text="${t.replace(/"/g, "&quot;")}">${t}</button>`)
+          .join("");
+
+        async function loadOther() {
+          try {
+            const info = await ZE.api(`/auth/user-info/${otherId}`);
+            document.getElementById("otherName").textContent = info.name || "Chat";
+          } catch { /* ignore */ }
+        }
+
+        function renderMessages(rows) {
+          if (!rows.length) {
+            messagesEl.innerHTML = `<div class="status">Say hello to start the chat.</div>`;
+            return;
+          }
+          messagesEl.innerHTML = rows.map((m) => {
+            const mine = m.sender_id === user.id;
+            const time = new Date(m.sent_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            let body = "";
+            if (m.photo_url) body += `<img src="${m.photo_url}" alt="" />`;
+            if (m.content) body += `<div>${escapeHtml(m.content)}</div>`;
+            if (m.audio_url) body += `<div>🎤 Voice note</div>`;
+            return `<div class="bubble ${mine ? "me" : "them"}">${body}<span class="bubble-time">${time}</span></div>`;
+          }).join("");
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        async function loadMessages(showStatus) {
+          try {
+            const data = await ZE.api(`/messages/conversation/${otherId}`);
+            if (status && status.parentNode) status.remove();
+            renderMessages(data.messages || []);
+          } catch {
+            if (showStatus && status && status.parentNode) {
+              status.textContent = "Could not load messages.";
+            }
+          }
+        }
+
+        async function sendPayload(payload) {
+          if (sending) return;
+          sending = true;
+          try {
+            await ZE.api("/messages", {
+              method: "POST",
+              body: JSON.stringify({ receiver_id: Number(otherId), ...payload }),
+            });
+            await loadMessages(false);
+          } catch (err) {
+            alert(err.message || "Could not send.");
+          } finally {
+            sending = false;
+          }
+        }
+
+        document.getElementById("sendBtn").addEventListener("click", async () => {
+          const content = textInput.value.trim();
+          if (!content) return;
+          textInput.value = "";
+          await sendPayload({ content });
+        });
+
+        textInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            document.getElementById("sendBtn").click();
+          }
+        });
+
+        document.getElementById("quick").addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-text]");
+          if (!btn) return;
+          sendPayload({ content: btn.dataset.text });
+        });
+
+        document.getElementById("photoInput").addEventListener("change", async (e) => {
+          const file = e.target.files && e.target.files[0];
+          e.target.value = "";
+          if (!file) return;
+          try {
+            const url = await ZE.uploadImage(file);
+            await sendPayload({ photo_url: url });
+          } catch (err) {
+            alert(err.message || "Photo upload failed.");
+          }
+        });
+
+        loadOther();
+        loadMessages(true);
+        setInterval(() => loadMessages(false), 3000);
+      }
+    }
+  </script>
+</body>
+</html>

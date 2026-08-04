@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chats — ZedEvents</title>
+  <meta name="theme-color" content="#C2410C" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <link rel="stylesheet" href="/css/extra.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/">
+      <div class="brand">ZedEvents</div>
+      <span class="brand-sub">Messages</span>
+    </a>
+    <div class="top-actions">
+      <a class="chip-btn" href="/">Home</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="status" class="status">Loading chats…</div>
+    <div class="chat-list" id="list" hidden></div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (!ZEAuth.requireLogin("/chats.html")) {
+      /* redirected */
+    } else {
+      const user = ZEAuth.getUser();
+      const status = document.getElementById("status");
+      const list = document.getElementById("list");
+
+      function formatTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        if (date.toDateString() === now.toDateString()) {
+          return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+        return date.toLocaleDateString([], { month: "short", day: "numeric" });
+      }
+
+      (async () => {
+        try {
+          const conversations = await ZE.api("/messages/conversations");
+          if (!conversations.length) {
+            status.textContent = "No conversations yet. Message a vendor from a service page.";
+            return;
+          }
+          status.hidden = true;
+          list.hidden = false;
+          list.innerHTML = conversations.map((conv) => {
+            const isMine = conv.sender_id === user.id;
+            let preview = isMine ? `You: ${conv.last_message || ""}` : (conv.last_message || "");
+            if (conv.last_photo_url) preview = "📷 Photo";
+            if (conv.last_audio_url) preview = "🎤 Voice note";
+            const unread = parseInt(conv.unread_count, 10) || 0;
+            const initial = (conv.other_user_name || "?").charAt(0).toUpperCase();
+            return `
+              <a class="chat-row" href="/chat.html?userId=${conv.other_user_id}">
+                <div class="chat-avatar">${initial}</div>
+                <div class="chat-row-main">
+                  <div class="chat-row-name">${conv.other_user_name || "User"}</div>
+                  <div class="chat-row-preview">${preview || " "}</div>
+                </div>
+                <div class="chat-row-meta">
+                  <div class="chat-row-time">${formatTime(conv.last_sent_at)}</div>
+                  ${unread > 0 ? `<span class="unread">${unread}</span>` : ""}
+                </div>
+              </a>`;
+          }).join("");
+        } catch {
+          status.textContent = "Could not load chats.";
+        }
+      })();
+    }
+  </script>
+</body>
+</html>

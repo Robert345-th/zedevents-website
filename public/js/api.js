@@ -46,5 +46,18 @@
     return `K${n.toLocaleString()}`;
   }
 
-  window.ZE = { API_URL, api, firstPhoto, formatPrice };
+  const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/kstg72vx/image/upload";
+  const UPLOAD_PRESET = "online_shops_uploads";
+
+  async function uploadImage(file) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", UPLOAD_PRESET);
+    const res = await fetch(CLOUDINARY_URL, { method: "POST", body: form });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("Photo upload failed");
+    return data.secure_url;
+  }
+
+  window.ZE = { API_URL, api, firstPhoto, formatPrice, uploadImage };
 })();

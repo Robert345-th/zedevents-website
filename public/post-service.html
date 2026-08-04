@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post a service — ZedEvents</title>
+  <meta name="theme-color" content="#C2410C" />
+  <link rel="stylesheet" href="/css/site.css" />
+  <link rel="stylesheet" href="/css/extra.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/">
+      <div class="brand">ZedEvents</div>
+      <span class="brand-sub">Post a service</span>
+    </a>
+  </header>
+
+  <main class="wrap">
+    <form class="auth-card" id="form" style="max-width:560px;">
+      <h1>Post a service</h1>
+      <p>List your catering, DJ, décor, or other event service.</p>
+      <div class="error" id="error" hidden></div>
+
+      <div class="field">
+        <label>Photos (up to 5)</label>
+        <input id="photos" type="file" accept="image/*" multiple />
+        <div class="photo-grid" id="preview"></div>
+      </div>
+
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category" required></select>
+      </div>
+
+      <div class="field">
+        <label for="title">Title</label>
+        <input id="title" required maxlength="120" placeholder="e.g. Wedding cakes in Lusaka" />
+      </div>
+
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" placeholder="What's included, packages, areas you cover…"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="price">Price (K) — optional</label>
+        <input id="price" type="number" min="0" step="1" placeholder="Leave blank to ask for quote" />
+      </div>
+
+      <button class="primary-btn" type="submit" id="submitBtn">Publish</button>
+    </form>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (!ZEAuth.requireLogin("/post-service.html")) {
+      /* redirected */
+    } else {
+      const error = document.getElementById("error");
+      const preview = document.getElementById("preview");
+      const categoryEl = document.getElementById("category");
+      let selectedFiles = [];
+
+      (async () => {
+        try {
+          const profile = await ZE.api("/auth/vendor-profile");
+          if (!profile.is_vendor) {
+            location.href = "/become-vendor.html?next=/post-service.html";
+            return;
+          }
+        } catch {
+          /* continue; post will fail if not vendor */
+        }
+
+        try {
+          const cats = await ZE.api("/services/categories");
+          categoryEl.innerHTML = cats
+            .map((c) => `<option value="${c.id}">${c.name}</option>`)
+            .join("");
+        } catch {
+          error.hidden = false;
+          error.textContent = "Could not load categories.";
+        }
+      })();
+
+      document.getElementById("photos").addEventListener("change", (e) => {
+        const files = Array.from(e.target.files || []);
+        selectedFiles = files.slice(0, 5);
+        preview.innerHTML = selectedFiles
+          .map((f) => `<img class="photo-thumb" src="${URL.createObjectURL(f)}" alt="" />`)
+          .join("");
+      });
+
+      document.getElementById("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        error.hidden = true;
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true;
+        btn.textContent = "Publishing…";
+        try {
+          const photoUrls = [];
+          for (const file of selectedFiles) {
+            photoUrls.push(await ZE.uploadImage(file));
+          }
+          const priceVal = document.getElementById("price").value;
+          await ZE.api("/services", {
+            method: "POST",
+            body: JSON.stringify({
+              title: document.getElementById("title").value.trim(),
+              description: document.getElementById("description").value.trim(),
+              price: priceVal ? Number(priceVal) : null,
+              category_id: Number(categoryEl.value) || null,
+              photos: photoUrls,
+            }),
+          });
+          location.href = "/?posted=1";
+        } catch (err) {
+          if (err.data && err.data.needsVendorProfile) {
+            location.href = "/become-vendor.html?next=/post-service.html";
+            return;
+          }
+          error.hidden = false;
+          error.textContent = err.message || "Could not post service.";
+          btn.disabled = false;
+          btn.textContent = "Publish";
+        }
+      });
+    }
+  </script>
+</body>
+</html>
