@@ -31,5 +31,9 @@
     return true;
   }
 
-  window.ZEAuth = { getUser, getToken, setSession, clearSession, requireLogin };
+  function isLoggedIn() {
+    return !!getToken();
+  }
+
+  window.ZEAuth = { getUser, getToken, setSession, clearSession, requireLogin, isLoggedIn };
 })();

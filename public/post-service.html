@@ -48,6 +48,14 @@
         <input id="price" type="number" min="0" step="1" placeholder="Leave blank to ask for quote" />
       </div>
 
+      <div class="field">
+        <label>Service location</label>
+        <button type="button" class="ghost-btn" id="locBtn" style="width:100%;margin-bottom:8px;">Use my current location</button>
+        <input id="locationLabel" class="field-input" placeholder="Area covered (e.g. Lusaka, Kabulonga)" />
+        <input type="hidden" id="latitude" />
+        <input type="hidden" id="longitude" />
+      </div>
+
       <p style="font-size:12px;color:#5C5955;margin:0 0 12px;line-height:1.4;">
         Posts stay private until an admin approves them. They will not show on Home for everyone until then.
       </p>
@@ -57,6 +65,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
+  <script src="/js/location.js"></script>
   <script>
     if (!ZEAuth.requireLogin("/post-service.html")) {
       /* redirected */
@@ -96,6 +105,28 @@
           .join("");
       });
 
+      document.getElementById("locBtn").addEventListener("click", () => {
+        const btn = document.getElementById("locBtn");
+        btn.disabled = true;
+        btn.textContent = "Getting location…";
+        ZELocation.getDeviceCoords()
+          .then((coords) => {
+            document.getElementById("latitude").value = coords.lat;
+            document.getElementById("longitude").value = coords.lng;
+            ZELocation.saveCoords(coords);
+            if (!document.getElementById("locationLabel").value.trim()) {
+              document.getElementById("locationLabel").value = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+            }
+            btn.textContent = "Location saved";
+          })
+          .catch(() => {
+            error.hidden = false;
+            error.textContent = "Could not get location. Type your area instead.";
+            btn.textContent = "Use my current location";
+          })
+          .finally(() => { btn.disabled = false; });
+      });
+
       document.getElementById("form").addEventListener("submit", async (e) => {
         e.preventDefault();
         error.hidden = true;
@@ -108,6 +139,8 @@
             photoUrls.push(await ZE.uploadImage(file));
           }
           const priceVal = document.getElementById("price").value;
+          const latVal = document.getElementById("latitude").value;
+          const lngVal = document.getElementById("longitude").value;
           await ZE.api("/services", {
             method: "POST",
             body: JSON.stringify({
@@ -116,6 +149,9 @@
               price: priceVal ? Number(priceVal) : null,
               category_id: Number(categoryEl.value) || null,
               photos: photoUrls,
+              latitude: latVal ? Number(latVal) : null,
+              longitude: lngVal ? Number(lngVal) : null,
+              location_label: document.getElementById("locationLabel").value.trim() || null,
             }),
           });
           location.href = "/my-shop.html?posted=1";

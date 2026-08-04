@@ -68,6 +68,13 @@
           item.business_name || item.vendor_name || "Vendor";
         document.getElementById("price").textContent = ZE.formatPrice(item.price);
         document.getElementById("desc").textContent = item.description || "No description yet.";
+        if (item.location_label) {
+          const loc = document.createElement("div");
+          loc.className = "meta";
+          loc.style.marginTop = "8px";
+          loc.textContent = `📍 ${item.location_label}`;
+          document.getElementById("desc").after(loc);
+        }
         const photo = ZE.firstPhoto(item.photos) || ZE.firstPhoto(item.business_photo_url);
         document.getElementById("media").innerHTML = photo
           ? `<img src="${photo}" alt="" />`

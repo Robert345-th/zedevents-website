@@ -130,6 +130,7 @@
     }
     .price { font-size: 13px; font-weight: 700; color: var(--orange); }
     .vendor { font-size: 11px; color: var(--subtext); margin-top: 3px; }
+    .distance { font-size: 10px; color: var(--orange-hot); font-weight: 600; margin-top: 2px; }
     .status { text-align: center; padding: 60px 20px; color: var(--subtext); }
   </style>
 </head>
@@ -137,7 +138,7 @@
   <div class="sticky-header">
     <div class="topbar">
       <div class="topbar-left">
-        <button class="gear" type="button" onclick="location.href='/settings.html'" aria-label="Menu">
+        <button class="gear" type="button" id="menuBtn" aria-label="Menu">
           <div class="icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </div>
@@ -151,14 +152,17 @@
       <div class="topbar-right">
         <button class="auth-btn" type="button" id="authBtn">Login / Sign Up</button>
         <div class="icon-row">
-          <button class="icon-btn" type="button" onclick="location.href='/favorites.html'" aria-label="Favorites">
+          <button class="icon-btn" type="button" id="mapBtn" aria-label="Map">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3.5v17l-5 2V5.5z"/><path d="M9 3.5 15 5.5v17l-6-2z"/><path d="M15 5.5 20 3.5v17l-5 2z"/></svg>
+          </button>
+          <button class="icon-btn" type="button" id="favBtn" aria-label="Favorites">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
           </button>
-          <button class="icon-btn" type="button" onclick="location.href='/chats.html'" aria-label="Chats">
+          <button class="icon-btn" type="button" id="chatBtn" aria-label="Chats">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span class="badge" id="chatBadge"></span>
           </button>
-          <button class="icon-btn" type="button" onclick="location.href='/post-service.html'" aria-label="Post">
+          <button class="icon-btn" type="button" id="postBtn" aria-label="Post">
             <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
@@ -170,6 +174,7 @@
     </div>
     <div class="chips-row" id="cats">
       <button type="button" class="chip active" data-id="">All</button>
+      <button type="button" class="chip" data-id="__nearby__">Nearby</button>
     </div>
   </div>
 
@@ -178,6 +183,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
+  <script src="/js/location.js"></script>
   <script src="/js/bottom-nav.js"></script>
   <script>
     const grid = document.getElementById("grid");
@@ -186,6 +192,20 @@
     const search = document.getElementById("search");
     let services = [];
     let activeCategory = "";
+    let sortNearby = false;
+    let myCoords = ZELocation.getSavedCoords();
+
+    function goLogin(next) {
+      if (!ZEAuth.requireLogin(next)) return false;
+      location.href = next;
+      return true;
+    }
+
+    document.getElementById("menuBtn").onclick = () => goLogin("/settings.html");
+    document.getElementById("favBtn").onclick = () => goLogin("/favorites.html");
+    document.getElementById("chatBtn").onclick = () => goLogin("/chats.html");
+    document.getElementById("postBtn").onclick = () => goLogin("/post-service.html");
+    document.getElementById("mapBtn").onclick = () => { location.href = "/map-view.html"; };
 
     function escapeHtml(str) {
       return String(str)
@@ -221,20 +241,51 @@
       } catch { /* ignore */ }
     }
 
+    function formatDistance(km) {
+      if (km == null) return "";
+      if (km < 1) return `${Math.round(km * 1000)} m away`;
+      return `${km.toFixed(km < 10 ? 1 : 0)} km away`;
+    }
+
+    function withDistance(list) {
+      if (!myCoords) return list.map((item) => ({ ...item, distanceKm: null }));
+      return list.map((item) => {
+        const lat = parseFloat(item.latitude);
+        const lng = parseFloat(item.longitude);
+        const distanceKm = Number.isFinite(lat) && Number.isFinite(lng)
+          ? ZELocation.getDistanceKm(myCoords.lat, myCoords.lng, lat, lng)
+          : null;
+        return { ...item, distanceKm };
+      });
+    }
+
     function renderCards(list) {
-      if (!list.length) {
+      let rows = withDistance(list);
+      if (sortNearby && myCoords) {
+        rows = rows.slice().sort((a, b) => {
+          if (a.distanceKm == null && b.distanceKm == null) return 0;
+          if (a.distanceKm == null) return 1;
+          if (b.distanceKm == null) return -1;
+          return a.distanceKm - b.distanceKm;
+        });
+      }
+
+      if (!rows.length) {
         grid.hidden = true;
         status.hidden = false;
         status.textContent = search.value.trim()
           ? "No services match your search."
-          : "No services posted yet.";
+          : sortNearby && !myCoords
+            ? "Turn on location to see nearby services."
+            : "No services posted yet.";
         return;
       }
       status.hidden = true;
       grid.hidden = false;
-      grid.innerHTML = list.map((item) => {
+      grid.innerHTML = rows.map((item) => {
         const photo = ZE.firstPhoto(item.photos);
         const vendor = item.business_name || item.vendor_name || "Vendor";
+        const dist = formatDistance(item.distanceKm);
         const img = photo
           ? `<img src="${photo}" alt="" loading="lazy" />`
           : `<div class="thumb-ph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 16-5-5-4 4-2-2-5 5"/></svg></div>`;
@@ -245,6 +296,7 @@
               <div class="card-cat">${escapeHtml(item.category || "Service")}</div>
               <div class="title">${escapeHtml(item.title || "Untitled")}</div>
               <div class="price">${ZE.formatPrice(item.price)}</div>
+              ${dist ? `<div class="distance">${escapeHtml(dist)}</div>` : ""}
               <div class="vendor">${escapeHtml(vendor)}</div>
             </div>
           </a>`;
@@ -253,11 +305,18 @@
 
     function applyFilter() {
       const q = search.value.trim().toLowerCase();
-      const filtered = services.filter((item) => {
+      let filtered = services.filter((item) => {
         if (!q) return true;
         const blob = `${item.title || ""} ${item.description || ""} ${item.business_name || ""} ${item.vendor_name || ""} ${item.category || ""}`.toLowerCase();
         return blob.includes(q);
       });
+      if (sortNearby && myCoords) {
+        filtered = filtered.filter((item) => {
+          const lat = parseFloat(item.latitude);
+          const lng = parseFloat(item.longitude);
+          return Number.isFinite(lat) && Number.isFinite(lng);
+        });
+      }
       renderCards(filtered);
     }
 
@@ -280,7 +339,7 @@
       status.textContent = "Loading services…";
       grid.hidden = true;
       try {
-        const path = activeCategory
+        const path = activeCategory && activeCategory !== "__nearby__"
           ? `/services?category_id=${encodeURIComponent(activeCategory)}`
           : "/services";
         services = await ZE.api(path);
@@ -297,13 +356,34 @@
       if (!btn) return;
       catsEl.querySelectorAll(".chip").forEach((el) => el.classList.remove("active"));
       btn.classList.add("active");
-      activeCategory = btn.dataset.id || "";
+      const id = btn.dataset.id || "";
+      sortNearby = id === "__nearby__";
+      activeCategory = sortNearby ? "" : id;
+      if (sortNearby && !myCoords) {
+        ZELocation.getDeviceCoords()
+          .then((coords) => {
+            myCoords = coords;
+            ZELocation.saveCoords(coords);
+            loadServices();
+          })
+          .catch(() => loadServices());
+        return;
+      }
       loadServices();
     });
 
     search.addEventListener("input", applyFilter);
     paintAuth();
     loadCategories();
+    if (!myCoords) {
+      ZELocation.getDeviceCoords()
+        .then((coords) => {
+          myCoords = coords;
+          ZELocation.saveCoords(coords);
+          if (services.length) applyFilter();
+        })
+        .catch(() => {});
+    }
     loadServices();
   </script>
 </body>

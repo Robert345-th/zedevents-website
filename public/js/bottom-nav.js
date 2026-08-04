@@ -49,12 +49,21 @@
     mount.className = "bottom-nav";
     mount.innerHTML = ITEMS.map((item) => {
       const isActive = active && item.key === active;
+      const needsLogin = item.key === "shop";
       return `
-        <a href="${item.href}" class="nav-item${isActive ? " active" : ""}">
+        <a href="${item.href}" class="nav-item${isActive ? " active" : ""}"${needsLogin ? ' data-require-login="1"' : ""}>
           <div class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[item.key]}</svg></div>
           <div>${item.label}</div>
         </a>`;
     }).join("");
+
+    mount.querySelectorAll("[data-require-login]").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        if (window.ZEAuth && !ZEAuth.requireLogin(link.getAttribute("href"))) {
+          e.preventDefault();
+        }
+      });
+    });
   }
 
   window.renderBottomNav = renderBottomNav;
