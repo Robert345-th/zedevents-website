@@ -98,6 +98,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
+  <script src="/js/ui.js"></script>
   <script>
     if (!ZEAuth.requireLogin("/my-shop.html")) {
       /* redirected */
@@ -163,12 +164,19 @@
 
           list.querySelectorAll("[data-del]").forEach((btn) => {
             btn.addEventListener("click", async () => {
-              if (!confirm("Remove this service?")) return;
+              const ok = await ZEUI.confirm({
+                title: "Remove service",
+                message: "Remove this service?",
+                okText: "Remove",
+                danger: true,
+              });
+              if (!ok) return;
               try {
                 await ZE.api(`/services/${btn.dataset.del}`, { method: "DELETE" });
+                ZEUI.toast("Service removed.", "success");
                 load();
               } catch (err) {
-                alert(err.message || "Could not delete.");
+                ZEUI.error(err.message || "Could not delete.");
               }
             });
           });

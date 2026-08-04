@@ -33,6 +33,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
+  <script src="/js/ui.js"></script>
   <script>
     if (!ZEAuth.requireLogin(location.pathname + location.search)) {
       /* redirected */
@@ -118,7 +119,7 @@
             });
             await loadMessages(false);
           } catch (err) {
-            alert(err.message || "Could not send.");
+            ZEUI.error(err.message || "Could not send.");
           } finally {
             sending = false;
           }
@@ -152,7 +153,7 @@
             const url = await ZE.uploadImage(file);
             await sendPayload({ photo_url: url });
           } catch (err) {
-            alert(err.message || "Photo upload failed.");
+            ZEUI.error(err.message || "Photo upload failed.");
           }
         });
 

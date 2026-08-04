@@ -38,6 +38,7 @@
   </main>
 
   <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
   <script src="/js/auth.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
@@ -84,19 +85,19 @@
             await ZE.api(`/favorites/${id}`, { method: "POST" });
             document.getElementById("favBtn").textContent = "Saved";
           } catch (err) {
-            alert(err.message || "Could not save favorite.");
+            ZEUI.error(err.message || "Could not save favorite.");
           }
         });
 
         document.getElementById("msgBtn").addEventListener("click", () => {
           if (!item.vendor_id) {
-            alert("This service has no vendor to message.");
+            ZEUI.error("This service has no vendor to message.");
             return;
           }
           if (!ZEAuth.requireLogin(location.pathname + location.search)) return;
           const me = ZEAuth.getUser();
           if (me && String(me.id) === String(item.vendor_id)) {
-            alert("This is your own service.");
+            ZEUI.error("This is your own service.");
             return;
           }
           location.href = `/chat.html?userId=${item.vendor_id}`;
