@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ZedEvents - Admin</title>
+  <meta name="theme-color" content="#C2410C" />
+  <link rel="manifest" href="/manifest.json" />
+  <style>
+    :root {
+      --bg: #F4F1EC; --card: #FFFFFF; --border: #E2E0DC;
+      --text: #211D1A; --subtext: #5C5955; --black: #111111;
+      --orange: #C2410C; --cream: #FFF3E8; --price-red: #A3131C;
+      --green-btn: #2F4F3E; --thumb-bg: #E9E2D3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg); color: var(--text); padding-bottom: 24px;
+    }
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--orange); padding: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .back-button {
+      width: 40px; height: 40px; padding: 0; background: none; border: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .back-button svg {
+      width: 22px; height: 22px; stroke: var(--cream); fill: none;
+      stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .header-title { color: var(--cream); font-size: 18px; font-weight: 700; }
+    .center-box {
+      display: flex; align-items: center; justify-content: center;
+      padding: 80px 24px; text-align: center; color: var(--subtext);
+    }
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--orange); border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-text { color: var(--price-red); font-weight: 600; }
+    .list { padding: 14px; max-width: 640px; margin: 0 auto; }
+    .section-note {
+      font-size: 12px; color: var(--subtext); margin-bottom: 12px; line-height: 1.45;
+    }
+    .count-pill {
+      display: inline-block; background: var(--cream); color: var(--orange);
+      border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700;
+      margin-left: 8px;
+    }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 10px;
+    }
+    .card-title { font-size: 15px; font-weight: 700; }
+    .card-sub { font-size: 12px; color: var(--subtext); margin-top: 2px; }
+    .card-detail { font-size: 12px; margin-top: 6px; line-height: 1.45; }
+    .card-price { font-size: 13px; color: var(--price-red); font-weight: 700; margin-top: 4px; }
+    .photo-row { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
+    .photo-row img {
+      width: 72px; height: 72px; border-radius: 10px; object-fit: cover;
+      background: var(--thumb-bg); flex-shrink: 0;
+    }
+    .card-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .approve-btn, .reject-btn {
+      flex: 1; border: none; padding: 11px; border-radius: 10px;
+      color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .approve-btn { background: var(--green-btn); }
+    .reject-btn { background: var(--price-red); }
+    .approve-btn:disabled, .reject-btn:disabled { opacity: 0.65; cursor: default; }
+    .refresh-btn {
+      margin: 0 14px 8px; max-width: 640px; width: calc(100% - 28px);
+      display: block; margin-left: auto; margin-right: auto;
+      background: var(--black); color: var(--cream); border: none;
+      border-radius: 10px; padding: 12px; font-weight: 700; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="back-button" type="button" onclick="history.back()" aria-label="Go back">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="header-title">Admin</div>
+  </div>
+
+  <div id="app"><div class="center-box"><div class="spinner"></div></div></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    const app = document.getElementById("app");
+    let pending = [];
+    let busyId = null;
+
+    function parsePhotos(photos) {
+      if (!photos) return [];
+      if (Array.isArray(photos)) return photos.filter(Boolean);
+      if (typeof photos === "string") {
+        try {
+          const parsed = JSON.parse(photos);
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [photos];
+        } catch {
+          return photos ? [photos] : [];
+        }
+      }
+      return [];
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString();
+    }
+
+    function render() {
+      if (!pending.length) {
+        app.innerHTML = `
+          <div class="list">
+            <div class="section-note">No services waiting for approval right now.</div>
+            <button class="refresh-btn" type="button" id="refreshBtn">Refresh</button>
+          </div>`;
+        document.getElementById("refreshBtn").onclick = loadPending;
+        return;
+      }
+
+      app.innerHTML = `
+        <div class="list">
+          <div class="section-note">
+            Pending services<span class="count-pill">${pending.length}</span>
+          </div>
+          ${pending.map((item) => {
+            const photos = parsePhotos(item.photos);
+            const vendor = item.business_name || item.vendor_name || "Vendor";
+            return `
+              <div class="card" data-id="${item.id}">
+                <div class="card-title">${escapeHtml(item.title)}</div>
+                <div class="card-sub">${escapeHtml(vendor)} · ${escapeHtml(item.category || "Uncategorised")}</div>
+                <div class="card-price">${ZE.formatPrice(item.price)}</div>
+                <div class="card-detail">${escapeHtml(item.description || "No description.")}</div>
+                <div class="card-sub" style="margin-top:8px;">Posted ${escapeHtml(formatDate(item.date_posted))}</div>
+                ${photos.length ? `<div class="photo-row">${photos.slice(0, 4).map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy" />`).join("")}</div>` : ""}
+                <div class="card-actions">
+                  <button class="approve-btn" type="button" data-act="approve" data-id="${item.id}">Approve</button>
+                  <button class="reject-btn" type="button" data-act="reject" data-id="${item.id}">Reject</button>
+                </div>
+              </div>`;
+          }).join("")}
+          <button class="refresh-btn" type="button" id="refreshBtn">Refresh</button>
+        </div>`;
+
+      document.getElementById("refreshBtn").onclick = loadPending;
+      app.querySelectorAll("[data-act]").forEach((btn) => {
+        btn.onclick = () => handleAction(btn.dataset.act, Number(btn.dataset.id));
+      });
+    }
+
+    async function loadPending() {
+      app.innerHTML = `<div class="center-box"><div class="spinner"></div></div>`;
+      try {
+        pending = await ZE.api("/admin/services/pending");
+        render();
+      } catch (err) {
+        app.innerHTML = `<div class="center-box"><div class="error-text">${escapeHtml(err.message || "Could not load pending services.")}</div></div>`;
+      }
+    }
+
+    async function handleAction(action, id) {
+      if (busyId) return;
+      const item = pending.find((row) => row.id === id);
+      const title = item?.title || "this service";
+      const okText = action === "approve" ? "Approve" : "Reject";
+      const message = action === "approve"
+        ? `Approve "${title}"? It will appear on the home feed.`
+        : `Reject "${title}"? The vendor will not see it on the public feed.`;
+      const confirmed = await ZEUI.confirm({
+        title: `${okText} service?`,
+        message,
+        okText,
+        danger: action === "reject",
+      });
+      if (!confirmed) return;
+
+      busyId = id;
+      app.querySelectorAll(`[data-id="${id}"] button`).forEach((btn) => { btn.disabled = true; });
+
+      try {
+        await ZE.api(`/admin/services/${id}/${action}`, { method: "PUT" });
+        pending = pending.filter((row) => row.id !== id);
+        ZEUI.toast(action === "approve" ? "Service approved." : "Service rejected.", "success");
+        render();
+      } catch (err) {
+        ZEUI.error(err.message || `Could not ${action} service.`);
+        app.querySelectorAll(`[data-id="${id}"] button`).forEach((btn) => { btn.disabled = false; });
+      } finally {
+        busyId = null;
+      }
+    }
+
+    async function init() {
+      if (!ZEAuth.requireLogin("/admin.html")) return;
+
+      try {
+        const me = await ZE.api("/auth/me");
+        ZEAuth.setSession(ZEAuth.getToken(), me);
+        if (!me.is_admin) {
+          app.innerHTML = `<div class="center-box"><div class="error-text">Admin access only.</div></div>`;
+          return;
+        }
+        await loadPending();
+      } catch (err) {
+        const cached = ZEAuth.getUser();
+        if (cached?.is_admin) {
+          await loadPending();
+          return;
+        }
+        app.innerHTML = `<div class="center-box"><div class="error-text">${escapeHtml(err.message || "Could not verify admin access.")}</div></div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

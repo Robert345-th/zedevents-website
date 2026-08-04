@@ -145,6 +145,15 @@
         <div class="row-sub">Become a vendor or update shop details</div>
       </div>
     </button>
+    <button class="row" type="button" id="adminRow" style="display:none;" onclick="location.href='/admin.html'">
+      <div>
+        <div class="row-title">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Admin
+        </div>
+        <div class="row-sub">Approve or reject pending services</div>
+      </div>
+    </button>
 
     <div class="section-label">Notifications</div>
     <div class="row" style="cursor:default;">
@@ -216,6 +225,16 @@
       const user = ZEAuth.getUser() || {};
       document.getElementById("name").textContent = user.name || user.business_name || "Account";
       document.getElementById("phone").textContent = user.phone || "";
+
+      (async () => {
+        try {
+          const me = await ZE.api("/auth/me");
+          ZEAuth.setSession(ZEAuth.getToken(), me);
+          if (me.is_admin) document.getElementById("adminRow").style.display = "";
+        } catch {
+          if (user.is_admin) document.getElementById("adminRow").style.display = "";
+        }
+      })();
 
       function openModal(id) {
         document.getElementById(id).classList.add("open");
