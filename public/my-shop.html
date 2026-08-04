@@ -101,7 +101,7 @@
         user.business_name || user.name || "Your services";
 
       if (new URLSearchParams(location.search).get("posted") === "1") {
-        banner.textContent = "Submitted — your post is waiting for approval. It won’t show on Home until approved.";
+        banner.textContent = "Saved — waiting for approval. It won’t show on Home until approved.";
         banner.classList.add("show");
       }
 
@@ -137,10 +137,9 @@
             const img = photo
               ? `<img src="${photo}" alt="" loading="lazy" />`
               : `<div class="thumb-ph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 16-5-5-4 4-2-2-5 5"/></svg></div>`;
-            const openHref = item.status === "active" ? `/service.html?id=${item.id}` : "#";
             return `
               <div class="row" data-id="${item.id}">
-                <a class="row-main" href="${openHref}" style="display:flex;flex:1;align-items:center;min-width:0;">
+                <a class="row-main" href="/edit-service.html?id=${item.id}" style="display:flex;flex:1;align-items:center;min-width:0;">
                   <div class="thumb">${img}</div>
                   <div class="row-info">
                     <div class="row-title">${escapeHtml(item.title || "Untitled")}</div>
