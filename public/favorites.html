@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Favorites — ZedEvents</title>
+  <meta name="theme-color" content="#0b3d2e" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/">
+      <div class="brand">ZedEvents</div>
+      <span class="brand-sub">Saved services</span>
+    </a>
+  </header>
+
+  <main class="wrap">
+    <div id="status" class="status">Loading…</div>
+    <div class="grid" id="grid" hidden></div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (!ZEAuth.requireLogin("/favorites.html")) {
+      /* redirected */
+    } else {
+      (async () => {
+        const status = document.getElementById("status");
+        const grid = document.getElementById("grid");
+        try {
+          const list = await ZE.api("/favorites");
+          if (!list.length) {
+            status.textContent = "No favorites yet.";
+            return;
+          }
+          status.hidden = true;
+          grid.hidden = false;
+          grid.innerHTML = list.map((item) => {
+            const photo = ZE.firstPhoto(item.photos);
+            const img = photo
+              ? `<img class="card-img" src="${photo}" alt="" loading="lazy" />`
+              : `<div class="card-img"></div>`;
+            return `
+              <a class="card" href="/service.html?id=${item.id}">
+                ${img}
+                <div class="card-body">
+                  <div class="card-cat">${item.category || "Service"}</div>
+                  <div class="card-title">${item.title || "Untitled"}</div>
+                  <div class="card-price">${ZE.formatPrice(item.price)}</div>
+                </div>
+              </a>`;
+          }).join("");
+        } catch {
+          status.textContent = "Could not load favorites.";
+        }
+      })();
+    }
+  </script>
+</body>
+</html>

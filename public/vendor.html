@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor — ZedEvents</title>
+  <meta name="theme-color" content="#0b3d2e" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/">
+      <div class="brand">ZedEvents</div>
+      <span class="brand-sub">Vendor profile</span>
+    </a>
+  </header>
+
+  <main class="wrap">
+    <div id="status" class="status">Loading…</div>
+    <div class="panel" id="panel" hidden>
+      <h1 id="name">—</h1>
+      <p class="meta" id="bio"></p>
+      <div id="reviews" style="margin-top:16px;"></div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const status = document.getElementById("status");
+    const panel = document.getElementById("panel");
+
+    (async () => {
+      if (!id) {
+        status.textContent = "Missing vendor id.";
+        return;
+      }
+      try {
+        const [profile, reviews] = await Promise.all([
+          ZE.api(`/reviews/vendor/${id}/profile`),
+          ZE.api(`/reviews/vendor/${id}`),
+        ]);
+        status.hidden = true;
+        panel.hidden = false;
+        document.getElementById("name").textContent =
+          profile.business_name || profile.name || "Vendor";
+        document.getElementById("bio").textContent =
+          profile.business_bio || "No bio yet.";
+        const box = document.getElementById("reviews");
+        if (!reviews.length) {
+          box.innerHTML = "<p class='meta'>No reviews yet.</p>";
+        } else {
+          box.innerHTML = reviews.map((r) => `
+            <div style="border-top:1px solid var(--line); padding:12px 0;">
+              <strong>${r.rating || "—"}/5</strong>
+              <div class="meta">${r.comment || ""}</div>
+            </div>`).join("");
+        }
+      } catch {
+        status.textContent = "Could not load vendor.";
+      }
+    })();
+  </script>
+</body>
+</html>

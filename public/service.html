@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service — ZedEvents</title>
+  <meta name="theme-color" content="#0b3d2e" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/">
+      <div class="brand">ZedEvents</div>
+      <span class="brand-sub">Back to listings</span>
+    </a>
+    <div class="top-actions">
+      <a class="chip-btn" href="/login.html" id="authLink">Login</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="status" class="status">Loading…</div>
+    <div class="detail-layout" id="detail" hidden>
+      <div class="detail-media" id="media"></div>
+      <div class="panel">
+        <div class="card-cat" id="category">Service</div>
+        <h1 id="title">—</h1>
+        <div class="meta" id="vendor">—</div>
+        <div class="price-lg" id="price">—</div>
+        <p class="desc" id="desc"></p>
+        <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="primary-btn" id="favBtn">Save to favorites</button>
+          <a class="ghost-btn" id="vendorLink" href="#">View vendor</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    const status = document.getElementById("status");
+    const detail = document.getElementById("detail");
+
+    const user = ZEAuth.getUser();
+    if (user) {
+      const authLink = document.getElementById("authLink");
+      authLink.textContent = "Account";
+      authLink.href = "/account.html";
+    }
+
+    async function load() {
+      if (!id) {
+        status.textContent = "Missing service id.";
+        return;
+      }
+      try {
+        const item = await ZE.api(`/services/${id}`);
+        status.hidden = true;
+        detail.hidden = false;
+        document.getElementById("category").textContent = item.category || "Service";
+        document.getElementById("title").textContent = item.title || "Untitled";
+        document.getElementById("vendor").textContent =
+          item.business_name || item.vendor_name || "Vendor";
+        document.getElementById("price").textContent = ZE.formatPrice(item.price);
+        document.getElementById("desc").textContent = item.description || "No description yet.";
+        const photo = ZE.firstPhoto(item.photos) || ZE.firstPhoto(item.business_photo_url);
+        document.getElementById("media").innerHTML = photo
+          ? `<img src="${photo}" alt="" />`
+          : "";
+        const vendorLink = document.getElementById("vendorLink");
+        if (item.vendor_id) {
+          vendorLink.href = `/vendor.html?id=${item.vendor_id}`;
+        } else {
+          vendorLink.hidden = true;
+        }
+
+        document.getElementById("favBtn").addEventListener("click", async () => {
+          if (!ZEAuth.requireLogin(location.pathname + location.search)) return;
+          try {
+            await ZE.api(`/favorites/${id}`, { method: "POST" });
+            document.getElementById("favBtn").textContent = "Saved";
+          } catch (err) {
+            alert(err.message || "Could not save favorite.");
+          }
+        });
+      } catch {
+        status.textContent = "Could not load this service.";
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

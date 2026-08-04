@@ -1,0 +1,13 @@
+{
+  "name": "zedevents-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ZedEvents customer website",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npx --yes serve public -l 5173"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

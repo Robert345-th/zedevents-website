@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account — ZedEvents</title>
+  <meta name="theme-color" content="#0b3d2e" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/">
+      <div class="brand">ZedEvents</div>
+      <span class="brand-sub">Your account</span>
+    </a>
+  </header>
+
+  <main class="wrap">
+    <div class="auth-card">
+      <h1 id="name">Account</h1>
+      <p id="phone"></p>
+      <a class="primary-btn" href="/favorites.html" style="display:inline-block;text-align:center;margin-bottom:10px;">Favorites</a>
+      <button class="ghost-btn" type="button" id="logout" style="width:100%;">Log out</button>
+    </div>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    if (!ZEAuth.requireLogin("/account.html")) {
+      /* redirected */
+    } else {
+      const user = ZEAuth.getUser();
+      document.getElementById("name").textContent = user.name || "Account";
+      document.getElementById("phone").textContent = user.phone || "";
+      document.getElementById("logout").addEventListener("click", () => {
+        ZEAuth.clearSession();
+        location.href = "/";
+      });
+    }
+  </script>
+</body>
+</html>
