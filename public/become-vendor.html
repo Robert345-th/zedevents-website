@@ -2,66 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="0;url=/register-shop.html" />
   <title>Become a vendor — ZedEvents</title>
-  <meta name="theme-color" content="#C2410C" />
-  <link rel="stylesheet" href="/css/site.css" />
-  <link rel="stylesheet" href="/css/extra.css" />
+  <script>location.replace("/register-shop.html" + (location.search || ""));</script>
 </head>
 <body>
-  <header class="topbar">
-    <a href="/">
-      <div class="brand">ZedEvents</div>
-      <span class="brand-sub">Vendor setup</span>
-    </a>
-  </header>
-
-  <main class="wrap">
-    <form class="auth-card" id="form">
-      <h1>Set up your business</h1>
-      <p>You need a vendor profile before posting services.</p>
-      <div class="error" id="error" hidden></div>
-      <div class="field">
-        <label for="business_name">Business name</label>
-        <input id="business_name" required maxlength="80" />
-      </div>
-      <div class="field">
-        <label for="business_bio">About your business</label>
-        <textarea id="business_bio" placeholder="What events do you cover?"></textarea>
-      </div>
-      <button class="primary-btn" type="submit">Continue</button>
-    </form>
-  </main>
-
-  <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
-  <script>
-    if (!ZEAuth.requireLogin(location.pathname + location.search)) {
-      /* redirected */
-    } else {
-      const next = new URLSearchParams(location.search).get("next") || "/post-service.html";
-      const error = document.getElementById("error");
-      document.getElementById("form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        error.hidden = true;
-        try {
-          await ZE.api("/auth/become-vendor", {
-            method: "POST",
-            body: JSON.stringify({
-              business_name: document.getElementById("business_name").value.trim(),
-              business_bio: document.getElementById("business_bio").value.trim(),
-            }),
-          });
-          const user = ZEAuth.getUser() || {};
-          user.is_vendor = true;
-          ZEAuth.setSession(ZEAuth.getToken(), user);
-          location.href = next;
-        } catch (err) {
-          error.hidden = false;
-          error.textContent = err.message || "Could not set up vendor profile.";
-        }
-      });
-    }
-  </script>
+  <p><a href="/register-shop.html">Continue to shop registration</a></p>
 </body>
 </html>

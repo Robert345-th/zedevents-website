@@ -67,7 +67,7 @@
         try {
           const profile = await ZE.api("/auth/vendor-profile");
           if (!profile.is_vendor) {
-            location.href = "/become-vendor.html?next=/post-service.html";
+            location.href = "/register-shop.html?next=/post-service.html";
             return;
           }
         } catch {
@@ -118,7 +118,7 @@
           location.href = "/?posted=1";
         } catch (err) {
           if (err.data && err.data.needsVendorProfile) {
-            location.href = "/become-vendor.html?next=/post-service.html";
+            location.href = "/register-shop.html?next=/post-service.html";
             return;
           }
           error.hidden = false;
