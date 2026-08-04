@@ -48,7 +48,10 @@
         <input id="price" type="number" min="0" step="1" placeholder="Leave blank to ask for quote" />
       </div>
 
-      <button class="primary-btn" type="submit" id="submitBtn">Publish</button>
+      <p style="font-size:12px;color:#5C5955;margin:0 0 12px;line-height:1.4;">
+        Posts stay private until an admin approves them. They will not show on Home for everyone until then.
+      </p>
+      <button class="primary-btn" type="submit" id="submitBtn">Submit for approval</button>
     </form>
   </main>
 
@@ -98,7 +101,7 @@
         error.hidden = true;
         const btn = document.getElementById("submitBtn");
         btn.disabled = true;
-        btn.textContent = "Publishing…";
+        btn.textContent = "Submitting…";
         try {
           const photoUrls = [];
           for (const file of selectedFiles) {
@@ -115,7 +118,7 @@
               photos: photoUrls,
             }),
           });
-          location.href = "/?posted=1";
+          location.href = "/my-shop.html?posted=1";
         } catch (err) {
           if (err.data && err.data.needsVendorProfile) {
             location.href = "/register-shop.html?next=/post-service.html";
@@ -124,7 +127,7 @@
           error.hidden = false;
           error.textContent = err.message || "Could not post service.";
           btn.disabled = false;
-          btn.textContent = "Publish";
+          btn.textContent = "Submit for approval";
         }
       });
     }
